@@ -5,6 +5,7 @@ from typing import Any
 from homeassistant.components.select import SelectEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.config_entries import ConfigEntry
 
 from .const import DOMAIN, DATA_CLIENT, DATA_COORDINATOR
@@ -40,6 +41,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     if "bathcontrolmodepassive" in d:
         entities.append(SiegeniaBathControlPassiveSelect(coord, entry))
+
+    if "ecomode_start" in d:
+        entities.append(SiegeniaSilentTimerTimeSelect(coord, entry, "ecomode_start", "Silent Timer ON"))
+
+    if "ecomode_end" in d:
+        entities.append(SiegeniaSilentTimerTimeSelect(coord, entry, "ecomode_end", "Silent Timer OFF"))
 
     if entities:
         async_add_entities(entities, True)
@@ -106,6 +113,8 @@ class SiegeniaFanModeSelect(CoordinatorEntity, SelectEntity):
 
 class SiegeniaFanMirrorSelect(CoordinatorEntity, SelectEntity):
     _attr_icon = "mdi:reflect-horizontal"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator)
@@ -164,6 +173,8 @@ class SiegeniaFanMirrorSelect(CoordinatorEntity, SelectEntity):
 
 class SiegeniaSlaveFanDirectionSelect(CoordinatorEntity, SelectEntity):
     _attr_icon = "mdi:arrow-split-vertical"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator)
@@ -221,6 +232,8 @@ class SiegeniaSlaveFanDirectionSelect(CoordinatorEntity, SelectEntity):
 
 class SiegeniaBathControlActiveSelect(CoordinatorEntity, SelectEntity):
     _attr_icon = "mdi:water"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator)
@@ -269,6 +282,8 @@ class SiegeniaBathControlActiveSelect(CoordinatorEntity, SelectEntity):
 
 class SiegeniaBathControlPassiveSelect(CoordinatorEntity, SelectEntity):
     _attr_icon = "mdi:water-outline"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator)
@@ -313,3 +328,61 @@ class SiegeniaBathControlPassiveSelect(CoordinatorEntity, SelectEntity):
     async def async_select_option(self, option: str) -> None:
         await self._client.set_device_params({"bathcontrolmodepassive": option})
         await self.coordinator.async_request_refresh()
+
+
+class SiegeniaSilentTimerTimeSelect(CoordinatorEntity, SelectEntity):
+    _attr_icon = "mdi:clock-outline"
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(self, coordinator, entry: ConfigEntry, key: str, name_suffix: str) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        self._key = key
+        self._client = coordinator.hass.data[DOMAIN][entry.entry_id][DATA_CLIENT]
+        system_name = self._get_system_name()
+        self._attr_name = f"{system_name} {name_suffix}" if system_name else f"Siegenia {name_suffix}"
+        slug = key.lower().replace("_", "-").replace(".", "-")
+        self._attr_unique_id = f"{entry.entry_id}-{slug}"
+        self._attr_options = [f"{h:02d}:{m:02d}" for h in range(24) for m in (0, 15, 30, 45)]
+
+    def _get_system_name(self) -> str | None:
+        if custom_name := self._entry.data.get("name"):
+            return custom_name
+        data = self.coordinator.data or {}
+        for part in ("state", "params", "info"):
+            d = data.get(part) or {}
+            if isinstance(d, dict):
+                system_name = d.get("systemname") or d.get("device_name")
+                if system_name:
+                    return system_name
+        return None
+
+    @property
+    def device_info(self):
+        return build_device_info(
+            self.coordinator.data, 
+            self._entry.entry_id, 
+            self._entry.data.get("host"),
+            self._entry.data.get("name")
+        )
+
+    def _d(self) -> dict:
+        return _combined(self.coordinator.data)
+
+    @property
+    def current_option(self) -> str | None:
+        val = self._d().get(self._key)
+        if val is not None:
+            try:
+                idx = int(val)
+                if 0 <= idx < 96:
+                    return self._attr_options[idx]
+            except Exception:
+                pass
+        return None
+
+    async def async_select_option(self, option: str) -> None:
+        if option in self._attr_options:
+            val = self._attr_options.index(option)
+            await self._client.set_device_params({self._key: val})
+            await self.coordinator.async_request_refresh()

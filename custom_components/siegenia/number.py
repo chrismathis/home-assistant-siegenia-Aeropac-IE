@@ -5,6 +5,7 @@ from typing import Optional
 from homeassistant.components.number import NumberEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.config_entries import ConfigEntry
 
 from .const import DOMAIN, DATA_CLIENT, DATA_COORDINATOR
@@ -60,9 +61,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         entities.append(SiegeniaFanPowerNumber(hass, entry))
         
     percent_configs = [
-        ("automode_maxairflow", "Auto Mode Max Airflow"),
-        ("automode_co2sensity", "Auto Mode CO2 Sensitivity"),
-        ("ecomode_maxairflow", "Eco Mode Max Airflow"),
+        ("automode_maxairflow", "Max Airflow"),
+        ("automode_co2sensity", "CO2 Sensitivity"),
+        ("ecomode_maxairflow", "Silent Max Airflow"),
         ("bathcontrolfanpower", "Bath Control Fan Power"),
         ("slave_fanpower", "Slave Fan Power"),
     ]
@@ -151,6 +152,7 @@ class SiegeniaPercentNumber(CoordinatorEntity, NumberEntity):
     _attr_native_step = 1.0
     _attr_native_unit_of_measurement = "%"
     _attr_mode = "auto"
+    _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(self, coordinator, entry: ConfigEntry, key: str, name_suffix: str) -> None:
         super().__init__(coordinator)
@@ -161,6 +163,8 @@ class SiegeniaPercentNumber(CoordinatorEntity, NumberEntity):
         self._attr_name = f"{system_name} {name_suffix}" if system_name else f"Siegenia {name_suffix}"
         slug = key.lower().replace("_", "-").replace(".", "-")
         self._attr_unique_id = f"{entry.entry_id}-{slug}"
+        if key in ("bathcontrolfanpower", "slave_fanpower"):
+            self._attr_entity_registry_enabled_default = False
 
     def _get_system_name(self) -> str | None:
         """Get the system name from device info."""
