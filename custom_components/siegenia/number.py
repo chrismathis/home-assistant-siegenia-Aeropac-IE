@@ -54,8 +54,25 @@ def _effective_max_m3h(d: dict) -> int:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
     coord = hass.data[DOMAIN][entry.entry_id][DATA_COORDINATOR]
     d = _combined(coord.data)
+    entities: list[NumberEntity] = []
+    
     if any(k in d for k in ("fanpower", "maxfanpower", "maxfanpowermanual", "max_fan_power", "manual_maxfanpower")):
-        async_add_entities([SiegeniaFanPowerNumber(hass, entry)], True)
+        entities.append(SiegeniaFanPowerNumber(hass, entry))
+        
+    percent_configs = [
+        ("automode_maxairflow", "Auto Mode Max Airflow"),
+        ("automode_co2sensity", "Auto Mode CO2 Sensitivity"),
+        ("ecomode_maxairflow", "Eco Mode Max Airflow"),
+        ("bathcontrolfanpower", "Bath Control Fan Power"),
+        ("slave_fanpower", "Slave Fan Power"),
+    ]
+    for key, name_suffix in percent_configs:
+        if key in d:
+            entities.append(SiegeniaPercentNumber(coord, entry, key, name_suffix))
+            
+    if entities:
+        async_add_entities(entities, True)
+
 
 class SiegeniaFanPowerNumber(CoordinatorEntity, NumberEntity):
     _attr_icon = "mdi:fan"
@@ -125,4 +142,62 @@ class SiegeniaFanPowerNumber(CoordinatorEntity, NumberEntity):
         value = max(0.0, min(float(value), float(eff_max)))
         pct = int(round((value * 100) / max(1.0, float(eff_max))))
         await self._client.set_device_params({"automode": False, "auto_mode": False, "fanpower": pct})
+        await self.coordinator.async_request_refresh()
+
+
+class SiegeniaPercentNumber(CoordinatorEntity, NumberEntity):
+    _attr_native_min_value = 0.0
+    _attr_native_max_value = 100.0
+    _attr_native_step = 1.0
+    _attr_native_unit_of_measurement = "%"
+    _attr_mode = "auto"
+
+    def __init__(self, coordinator, entry: ConfigEntry, key: str, name_suffix: str) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        self._key = key
+        self._client = coordinator.hass.data[DOMAIN][entry.entry_id][DATA_CLIENT]
+        system_name = self._get_system_name()
+        self._attr_name = f"{system_name} {name_suffix}" if system_name else f"Siegenia {name_suffix}"
+        slug = key.lower().replace("_", "-").replace(".", "-")
+        self._attr_unique_id = f"{entry.entry_id}-{slug}"
+
+    def _get_system_name(self) -> str | None:
+        """Get the system name from device info."""
+        if custom_name := self._entry.data.get("name"):
+            return custom_name
+        data = self.coordinator.data or {}
+        for part in ("state", "params", "info"):
+            d = data.get(part) or {}
+            if isinstance(d, dict):
+                system_name = d.get("systemname") or d.get("device_name")
+                if system_name:
+                    return system_name
+        return None
+
+    @property
+    def device_info(self):
+        return build_device_info(
+            self.coordinator.data, 
+            self._entry.entry_id, 
+            self._entry.data.get("host"),
+            self._entry.data.get("name")
+        )
+
+    def _d(self) -> dict:
+        return _combined(self.coordinator.data)
+
+    @property
+    def native_value(self) -> float | None:
+        d = self._d()
+        val = d.get(self._key)
+        if val is None:
+            return None
+        try:
+            return float(val)
+        except Exception:
+            return None
+
+    async def async_set_native_value(self, value: float) -> None:
+        await self._client.set_device_params({self._key: int(round(value))})
         await self.coordinator.async_request_refresh()

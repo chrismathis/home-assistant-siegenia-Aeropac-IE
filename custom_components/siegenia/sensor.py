@@ -28,6 +28,8 @@ UNIT_MAP = {
     "connection": None,
     "airquality": None,
     "maxfanpowermanual": None,
+    "airquality.voc": None,
+    "timer.remainingtime": "min",
 }
 
 def _flatten(data: Dict[str, Any], parent: str = "", out: Dict[str, Any] | None = None) -> Dict[str, Any]:
