@@ -2,6 +2,21 @@ from __future__ import annotations
 
 from .const import DOMAIN
 
+DEVICE_TYPE_MAP = {
+    1: "Aeropac",
+    2: "Aeromat VT",
+    3: "Aeromat UP",
+    4: "Aerovital",
+    5: "Aerovital",
+    8: "Aerotube",
+    10: "Universal Module",
+    11: "Drive Axxent DK",
+    12: "VT Upgrade",
+    13: "Drive CL",
+    14: "Aeroplus",
+    15: "Senso Secure",
+}
+
 
 def _info_from_data(data: dict | None) -> dict:
     info = (data or {}).get("info") or {}
@@ -36,7 +51,18 @@ def build_device_info(data: dict | None, entry_id: str, host: str | None = None,
     if name:
         device_info["name"] = name
 
-    model = _coerce_str(info.get("model") or info.get("type") or info.get("hardwareversion"))
+    # Resolve human-readable model from type map, fallback to other fields
+    model = None
+    dev_type = info.get("type")
+    if dev_type is not None:
+        try:
+            model = DEVICE_TYPE_MAP.get(int(dev_type))
+        except Exception:
+            pass
+
+    if not model:
+        model = _coerce_str(info.get("model") or info.get("type") or info.get("hardwareversion"))
+
     if model:
         device_info["model"] = model
 

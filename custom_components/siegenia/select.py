@@ -64,16 +64,16 @@ class SiegeniaFanModeSelect(CoordinatorEntity, SelectEntity):
         self._attr_unique_id = f"{entry.entry_id}-fanmode"
 
         # Determine options based on device type:
-        # Type 8: Aerotube: ["IN", "OUT", "IN_OUT", "AUTO"]
-        # Type 14: Aeroplus: ["IN", "OUT", "IN_OUT", "IN_OUT_WRG", "AUTO"]
+        # Type 8: Aerotube: ["IN", "OUT", "IN_OUT"]
+        # Type 14: Aeroplus: ["IN", "OUT", "IN_OUT", "IN_OUT_WRG"]
         d = _combined(coordinator.data)
         dev_type = d.get("type")
         if dev_type == 8:
-            self._attr_options = ["IN", "OUT", "IN_OUT", "AUTO"]
+            self._attr_options = ["IN", "OUT", "IN_OUT"]
         elif dev_type == 14:
-            self._attr_options = ["IN", "OUT", "IN_OUT", "IN_OUT_WRG", "AUTO"]
+            self._attr_options = ["IN", "OUT", "IN_OUT", "IN_OUT_WRG"]
         else:
-            self._attr_options = ["IN", "OUT", "IN_OUT", "AUTO"]
+            self._attr_options = ["IN", "OUT", "IN_OUT"]
 
     def _get_system_name(self) -> str | None:
         if custom_name := self._entry.data.get("name"):
