@@ -159,7 +159,15 @@ class SiegeniaFanEntity(CoordinatorEntity, FanEntity):
         await self._client.set_device_params(params)
         await self.coordinator.async_request_refresh()
 
-    async def async_turn_on(self, **kwargs: Any) -> None:
+    async def async_turn_on(
+        self,
+        percentage: int | None = None,
+        preset_mode: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        if percentage is not None:
+            await self.async_set_percentage(percentage)
+            return
         if "percentage" in kwargs:
             await self.async_set_percentage(kwargs["percentage"])
             return
