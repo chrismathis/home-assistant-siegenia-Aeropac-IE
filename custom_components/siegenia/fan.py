@@ -34,6 +34,7 @@ class SiegeniaFanEntity(CoordinatorEntity, FanEntity):
         system_name = self._get_system_name()
         self._attr_name = f"{system_name} Fan" if system_name else "Siegenia Fan"
         self._attr_unique_id = f"{entry.entry_id}-fan"
+        self._last_on_percentage = 50
         
     def _get_system_name(self) -> str | None:
         """Get the system name from device info."""
@@ -118,6 +119,8 @@ class SiegeniaFanEntity(CoordinatorEntity, FanEntity):
             p = int(d.get("fanpower", 0) or 0)  # Siegenia reports percent 0..100
         except Exception:
             p = 0
+        if p > 0:
+            self._last_on_percentage = p
         return max(0, min(100, p))
 
     @property
@@ -171,7 +174,17 @@ class SiegeniaFanEntity(CoordinatorEntity, FanEntity):
         if "percentage" in kwargs:
             await self.async_set_percentage(kwargs["percentage"])
             return
-        await self._client.set_device_params({"power": True, "on": True, "enabled": True})
+        target_pct = self._last_on_percentage
+        if not target_pct or target_pct <= 0:
+            target_pct = 50
+        await self._client.set_device_params({
+            "power": True,
+            "on": True,
+            "enabled": True,
+            "automode": False,
+            "auto_mode": False,
+            "fanpower": target_pct,
+        })
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
