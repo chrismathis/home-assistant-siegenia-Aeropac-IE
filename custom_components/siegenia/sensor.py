@@ -63,7 +63,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     entities.append(SiegeniaRawStateSensor(coordinator, entry))
 
     if "externaldevices" in combined:
-        entities.append(SiegeniaPairedDeviceSensor(coordinator, entry))
+        entities.append(SiegeniaConnectedDeviceSensor(coordinator, entry))
 
     async_add_entities(entities)
 
@@ -175,15 +175,17 @@ class SiegeniaRawStateSensor(CoordinatorEntity, SensorEntity):
         return {"raw_data": combined}
 
 
-class SiegeniaPairedDeviceSensor(CoordinatorEntity, SensorEntity):
+class SiegeniaConnectedDeviceSensor(CoordinatorEntity, SensorEntity):
     _attr_icon = "mdi:link-variant"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator)
         self._entry = entry
         system_name = self._get_system_name()
-        self._attr_name = f"{system_name} Paired Device" if system_name else "Siegenia Paired Device"
-        self._attr_unique_id = f"{entry.entry_id}-paired-device"
+        self._attr_name = f"{system_name} Connected Device" if system_name else "Siegenia Connected Device"
+        self._attr_unique_id = f"{entry.entry_id}-connected-device"
 
     def _get_system_name(self) -> str | None:
         if custom_name := self._entry.data.get("name"):
@@ -222,10 +224,24 @@ class SiegeniaPairedDeviceSensor(CoordinatorEntity, SensorEntity):
         devices_list = external_devices.get("devices") or []
         if not devices_list:
             return "None"
-        dev = devices_list[0]
-        name = dev.get("name") or "AEROTUBE"
-        serial = dev.get("serialnr") or ""
-        return f"{name} ({serial})".strip()
+
+        resolved_devices = []
+        for dev in devices_list:
+            serial = dev.get("serialnr")
+            if not serial:
+                resolved_devices.append(dev.get("name") or "AEROTUBE")
+                continue
+
+            from homeassistant.helpers import device_registry as dr
+            device_registry = dr.async_get(self.hass)
+            device = device_registry.async_get_device(identifiers={(DOMAIN, str(serial))})
+            if device:
+                friendly_name = device.name_by_user or device.name
+                resolved_devices.append(f"{friendly_name} ({serial})")
+            else:
+                resolved_devices.append(str(serial))
+
+        return ", ".join(resolved_devices)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -248,18 +264,23 @@ class SiegeniaPairedDeviceSensor(CoordinatorEntity, SensorEntity):
 
         if not devices_list:
             return {
-                "paired": False,
+                "connected_device": False,
                 "mirror_mode": mirror_mode,
             }
 
-        dev = devices_list[0]
+        connected_list = []
+        for dev in devices_list:
+            connected_list.append({
+                "id": dev.get("id"),
+                "name": dev.get("name"),
+                "serial_number": dev.get("serialnr"),
+                "online": dev.get("online", False),
+                "type": dev.get("type"),
+            })
+
         return {
-            "paired": True,
-            "slave_id": dev.get("id"),
-            "slave_name": dev.get("name"),
-            "slave_serial": dev.get("serialnr"),
-            "slave_online": dev.get("online", False),
-            "slave_type": dev.get("type"),
+            "connected_device": True,
+            "connected_devices": connected_list,
             "mirror_mode": mirror_mode,
             "slave_direction": {
                 1: "Slave supply air",
