@@ -61,6 +61,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             entities.append(SiegeniaKeySensor(coordinator, entry, key, unit))
 
     entities.append(SiegeniaRawStateSensor(coordinator, entry))
+
+    if "externaldevices" in combined:
+        entities.append(SiegeniaPairedDeviceSensor(coordinator, entry))
+
     async_add_entities(entities)
 
 class SiegeniaKeySensor(CoordinatorEntity, SensorEntity):
@@ -169,3 +173,97 @@ class SiegeniaRawStateSensor(CoordinatorEntity, SensorEntity):
             if isinstance(d, dict):
                 combined.update(d)
         return {"raw_data": combined}
+
+
+class SiegeniaPairedDeviceSensor(CoordinatorEntity, SensorEntity):
+    _attr_icon = "mdi:link-variant"
+
+    def __init__(self, coordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        system_name = self._get_system_name()
+        self._attr_name = f"{system_name} Paired Device" if system_name else "Siegenia Paired Device"
+        self._attr_unique_id = f"{entry.entry_id}-paired-device"
+
+    def _get_system_name(self) -> str | None:
+        if custom_name := self._entry.data.get("name"):
+            return custom_name
+        data = self.coordinator.data or {}
+        for part in ("state", "params", "info"):
+            d = data.get(part) or {}
+            if isinstance(d, dict):
+                system_name = d.get("systemname") or d.get("device_name")
+                if system_name:
+                    return system_name
+        return None
+
+    @property
+    def device_info(self):
+        return build_device_info(
+            self.coordinator.data, 
+            self._entry.entry_id, 
+            self._entry.data.get("host"),
+            self._entry.data.get("name")
+        )
+
+    def _d(self) -> dict:
+        data = self.coordinator.data or {}
+        merged = {}
+        for key in ("state", "params", "info"):
+            v = data.get(key) or {}
+            if isinstance(v, dict):
+                merged.update(v)
+        return merged
+
+    @property
+    def native_value(self) -> str | None:
+        d = self._d()
+        external_devices = d.get("externaldevices") or {}
+        devices_list = external_devices.get("devices") or []
+        if not devices_list:
+            return "None"
+        dev = devices_list[0]
+        name = dev.get("name") or "AEROTUBE"
+        serial = dev.get("serialnr") or ""
+        return f"{name} ({serial})".strip()
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        d = self._d()
+        external_devices = d.get("externaldevices") or {}
+        devices_list = external_devices.get("devices") or []
+        
+        # Mirror mode description
+        mirror_val = d.get("fanmirror")
+        mirror_mode = "Unknown"
+        if mirror_val is not None:
+            try:
+                mirror_mode = {
+                    0: "Slave mode",
+                    1: "Slave must mirror",
+                    2: "Slave must copy"
+                }.get(int(mirror_val), "Unknown")
+            except Exception:
+                pass
+
+        if not devices_list:
+            return {
+                "paired": False,
+                "mirror_mode": mirror_mode,
+            }
+
+        dev = devices_list[0]
+        return {
+            "paired": True,
+            "slave_id": dev.get("id"),
+            "slave_name": dev.get("name"),
+            "slave_serial": dev.get("serialnr"),
+            "slave_online": dev.get("online", False),
+            "slave_type": dev.get("type"),
+            "mirror_mode": mirror_mode,
+            "slave_direction": {
+                1: "Slave supply air",
+                2: "Slave exhaust air"
+            }.get(d.get("slave_fandirection"), "Unknown"),
+            "slave_power_percent": d.get("slave_fanpower"),
+        }
