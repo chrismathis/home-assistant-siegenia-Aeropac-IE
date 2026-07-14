@@ -131,7 +131,8 @@ class SiegeniaFanPowerNumber(CoordinatorEntity, NumberEntity):
     def native_value(self) -> float | None:
         d = self._d()
         try:
-            pct = int(d.get("fanpower", 0) or 0)  # percent 0..100
+            raw_power = int(d.get("fanpower", 0) or 0)
+            pct = int(round(raw_power * 100 / 7))
         except Exception:
             pct = 0
         eff_max = _effective_max_m3h(d)
@@ -142,7 +143,8 @@ class SiegeniaFanPowerNumber(CoordinatorEntity, NumberEntity):
         eff_max = _effective_max_m3h(d)
         value = max(0.0, min(float(value), float(eff_max)))
         pct = int(round((value * 100) / max(1.0, float(eff_max))))
-        await self._client.set_device_params({"automode": False, "auto_mode": False, "fanpower": pct})
+        raw_power = int(round(pct * 7 / 100))
+        await self._client.set_device_params({"automode": False, "auto_mode": False, "fanpower": raw_power})
         await self.coordinator.async_request_refresh()
 
 

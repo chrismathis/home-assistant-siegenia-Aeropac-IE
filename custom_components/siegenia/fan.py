@@ -34,7 +34,11 @@ class SiegeniaFanEntity(CoordinatorEntity, FanEntity):
         system_name = self._get_system_name()
         self._attr_name = f"{system_name} Fan" if system_name else "Siegenia Fan"
         self._attr_unique_id = f"{entry.entry_id}-fan"
+        self._attr_speed_count = 7
+        self._attr_percentage = 0
         self._last_on_percentage = 50
+        self._attr_preset_modes = ["Auto"]
+        self._attr_preset_mode = None
         
     def _get_system_name(self) -> str | None:
         """Get the system name from device info."""
@@ -116,7 +120,8 @@ class SiegeniaFanEntity(CoordinatorEntity, FanEntity):
     def percentage(self) -> int | None:
         d = self._combined()
         try:
-            p = int(d.get("fanpower", 0) or 0)  # Siegenia reports percent 0..100
+            raw_power = int(d.get("fanpower", 0) or 0)
+            p = int(round(raw_power * 100 / 7))
         except Exception:
             p = 0
         if p > 0:
@@ -124,8 +129,15 @@ class SiegeniaFanEntity(CoordinatorEntity, FanEntity):
         return max(0, min(100, p))
 
     @property
+    def preset_mode(self) -> str | None:
+        d = self._combined()
+        if bool(d.get("automode", d.get("auto_mode", False))):
+            return "Auto"
+        return None
+
+    @property
     def supported_features(self) -> int:
-        return PERCENTAGE_FLAG | FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF
+        return PERCENTAGE_FLAG | FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF | FanEntityFeature.SET_SPEED | FanEntityFeature.PRESET_MODE
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -133,7 +145,8 @@ class SiegeniaFanEntity(CoordinatorEntity, FanEntity):
         raw_max = self._raw_max_m3h(d)
         eff_max = self._effective_max_m3h(d)
         try:
-            p = int(d.get("fanpower", 0) or 0)
+            raw_power = int(d.get("fanpower", 0) or 0)
+            p = int(round(raw_power * 100 / 7))
         except Exception:
             p = 0
         airflow = round(eff_max * p / 100) if eff_max else None
@@ -154,10 +167,11 @@ class SiegeniaFanEntity(CoordinatorEntity, FanEntity):
 
     async def async_set_percentage(self, percentage: int) -> None:
         target_pct = max(0, min(100, int(percentage or 0)))
+        raw_power = int(round(target_pct * 7 / 100))
         params: dict[str, Any] = {
             "automode": False,
             "auto_mode": False,
-            "fanpower": target_pct,
+            "fanpower": raw_power,
         }
         await self._client.set_device_params(params)
         await self.coordinator.async_request_refresh()
@@ -177,16 +191,27 @@ class SiegeniaFanEntity(CoordinatorEntity, FanEntity):
         target_pct = self._last_on_percentage
         if not target_pct or target_pct <= 0:
             target_pct = 50
+        raw_power = int(round(target_pct * 7 / 100))
         await self._client.set_device_params({
             "power": True,
             "on": True,
             "enabled": True,
             "automode": False,
             "auto_mode": False,
-            "fanpower": target_pct,
+            "fanpower": raw_power,
+            "devicestate": {"deviceactive": True}
         })
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        await self._client.set_device_params({"power": False, "on": False, "enabled": False, "fanpower": 0})
+        await self._client.set_device_params({"devicestate": {"deviceactive": False}})
         await self.coordinator.async_request_refresh()
+
+    async def async_set_preset_mode(self, preset_mode: str) -> None:
+        """Home Assistant calls this when a preset button is clicked."""
+        if preset_mode == "Auto":
+            await self._client.set_device_params({"automode": True, "auto_mode": True})
+            self._attr_preset_mode = "Auto"
+            self._attr_percentage = None
+            await self.coordinator.async_request_refresh()
+        self.async_write_ha_state()

@@ -5,6 +5,7 @@
         "title": "Verbindung mit Siegenia-Gerät",
         "description": "Geben Sie die IP-Adresse/Hostname und Anmeldedaten ein (die gleichen wie in der SIEGENIA-App).",
         "data": {
+          "name": "Gerätename",
           "host": "Hostname oder IP-Adresse",
           "username": "Benutzername",
           "password": "Passwort",

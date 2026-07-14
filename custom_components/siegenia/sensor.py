@@ -30,6 +30,8 @@ UNIT_MAP = {
     "maxfanpowermanual": None,
     "airquality.voc": None,
     "timer.remainingtime": "min",
+    "timer.duration": "min",
+    "timer.poweron_time": None,
 }
 
 def _flatten(data: Dict[str, Any], parent: str = "", out: Dict[str, Any] | None = None) -> Dict[str, Any]:
@@ -54,6 +56,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             combined.update(d)
     flat = _flatten(combined)
     flat.update(combined)
+
+    # Ensure virtual keys exist for nested time objects (hour/minute)
+    for timer_key in ("timer.remainingtime", "timer.duration", "timer.poweron_time"):
+        if f"{timer_key}.hour" in flat and f"{timer_key}.minute" in flat:
+            flat[timer_key] = True
 
     entities: list[SensorEntity] = []
     for key, unit in UNIT_MAP.items():
@@ -112,17 +119,19 @@ class SiegeniaKeySensor(CoordinatorEntity, SensorEntity):
             if isinstance(d, dict):
                 combined.update(d)
         flat = combined.copy()
-        def _flatten_in(x: dict, parent: str = "", out: dict | None = None):
-            if out is None:
-                out = {}
-            for k, v in (x or {}).items():
-                kk = f"{parent}.{k}" if parent else str(k)
-                if isinstance(v, dict):
-                    _flatten_in(v, kk, out)
-                else:
-                    out[kk] = v
-            return out
-        flat.update(_flatten_in(combined))
+        flat.update(_flatten(combined))
+        
+        # Calculate total minutes or format time for nested time objects
+        if f"{self._key}.hour" in flat and f"{self._key}.minute" in flat:
+            try:
+                h = int(flat[f"{self._key}.hour"])
+                m = int(flat[f"{self._key}.minute"])
+                if self._key == "timer.poweron_time":
+                    return f"{h:02d}:{m:02d}"
+                return h * 60 + m
+            except ValueError:
+                pass
+
         return flat.get(self._key)
 
 class SiegeniaRawStateSensor(CoordinatorEntity, SensorEntity):

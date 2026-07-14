@@ -5,6 +5,7 @@
         "title": "Verbind met Siegenia apparaat",
         "description": "Voer het IP-adres/hostnaam en inloggegevens in (dezelfde als in de SIEGENIA app).",
         "data": {
+          "name": "Apparaatnaam",
           "host": "Hostnaam of IP-adres",
           "username": "Gebruikersnaam",
           "password": "Wachtwoord",
