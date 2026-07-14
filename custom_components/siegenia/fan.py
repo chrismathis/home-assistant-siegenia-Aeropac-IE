@@ -175,9 +175,14 @@ class SiegeniaFanEntity(CoordinatorEntity, FanEntity):
         target_pct = max(0, min(100, int(percentage or 0)))
         raw_power = int(round(target_pct * 7 / 100))
         
-        await self._client.set_device_params({
-            "fanlevel": raw_power
-        })
+        if raw_power == 0:
+            await self._client.set_device_params({
+                "devicestate": {"deviceactive": False}
+            })
+        else:
+            await self._client.set_device_params({
+                "fanlevel": raw_power
+            })
         
         await self.coordinator.async_request_refresh()
 
