@@ -158,10 +158,6 @@ class SiegeniaFanPowerNumber(CoordinatorEntity, NumberEntity):
 
 
 class SiegeniaPercentNumber(CoordinatorEntity, NumberEntity):
-    _attr_native_min_value = 0.0
-    _attr_native_max_value = 100.0
-    _attr_native_step = 1.0
-    _attr_native_unit_of_measurement = "%"
     _attr_mode = "auto"
     _attr_entity_category = EntityCategory.CONFIG
 
@@ -176,6 +172,17 @@ class SiegeniaPercentNumber(CoordinatorEntity, NumberEntity):
         self._attr_unique_id = f"{entry.entry_id}-{slug}"
         if key in ("bathcontrolfanpower", "slave_fanpower"):
             self._attr_entity_registry_enabled_default = False
+            
+        if "airflow" in key or "fanpower" in key or "fanlevel" in key:
+            self._attr_native_min_value = 1.0
+            self._attr_native_max_value = 7.0
+            self._attr_native_step = 1.0
+            self._attr_native_unit_of_measurement = None
+        else:
+            self._attr_native_min_value = 0.0
+            self._attr_native_max_value = 100.0
+            self._attr_native_step = 1.0
+            self._attr_native_unit_of_measurement = "%"
 
     def _get_system_name(self) -> str | None:
         """Get the system name from device info."""
