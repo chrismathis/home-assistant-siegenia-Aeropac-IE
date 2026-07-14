@@ -200,17 +200,9 @@ class SiegeniaFanEntity(CoordinatorEntity, FanEntity):
         if "percentage" in kwargs:
             await self.async_set_percentage(kwargs["percentage"])
             return
-        target_pct = self._last_on_percentage
-        if not target_pct or target_pct <= 0:
-            target_pct = 50
-        raw_power = int(round(target_pct * 7 / 100))
         
         await self._client.set_device_params({
             "devicestate": {"deviceactive": True}
-        })
-        
-        await self._client.set_device_params({
-            "fanlevel": raw_power
         })
         
         await self.coordinator.async_request_refresh()
@@ -218,9 +210,6 @@ class SiegeniaFanEntity(CoordinatorEntity, FanEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         await self._client.set_device_params({
             "devicestate": {"deviceactive": False}
-        })
-        await self._client.set_device_params({
-            "fanlevel": 0
         })
         await self.coordinator.async_request_refresh()
 
