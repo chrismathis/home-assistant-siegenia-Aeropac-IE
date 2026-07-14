@@ -32,6 +32,8 @@ UNIT_MAP = {
     "timer.remainingtime": "min",
     "timer.duration": "min",
     "timer.poweron_time": None,
+    "fanlevel": None,
+    "fanpower": None,
 }
 
 def _flatten(data: Dict[str, Any], parent: str = "", out: Dict[str, Any] | None = None) -> Dict[str, Any]:
