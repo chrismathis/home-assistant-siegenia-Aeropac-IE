@@ -131,7 +131,8 @@ class SiegeniaFanPowerNumber(CoordinatorEntity, NumberEntity):
     def native_value(self) -> float | None:
         d = self._d()
         try:
-            pct = int(d.get("fanpower", 0) or 0)  # percent 0..100
+            raw_power = int(d.get("fanlevel", d.get("fanpower", 0)) or 0)
+            pct = int(round(raw_power * 100 / 7))
         except Exception:
             pct = 0
         eff_max = _effective_max_m3h(d)
@@ -142,15 +143,21 @@ class SiegeniaFanPowerNumber(CoordinatorEntity, NumberEntity):
         eff_max = _effective_max_m3h(d)
         value = max(0.0, min(float(value), float(eff_max)))
         pct = int(round((value * 100) / max(1.0, float(eff_max))))
-        await self._client.set_device_params({"automode": False, "auto_mode": False, "fanpower": pct})
+        raw_power = int(round(pct * 7 / 100))
+        is_on = raw_power > 0
+        
+        await self._client.set_device_params({
+            "devicestate": {"deviceactive": is_on}
+        })
+        
+        await self._client.set_device_params({
+            "fanlevel": raw_power
+        })
+        
         await self.coordinator.async_request_refresh()
 
 
 class SiegeniaPercentNumber(CoordinatorEntity, NumberEntity):
-    _attr_native_min_value = 0.0
-    _attr_native_max_value = 100.0
-    _attr_native_step = 1.0
-    _attr_native_unit_of_measurement = "%"
     _attr_mode = "auto"
     _attr_entity_category = EntityCategory.CONFIG
 
@@ -165,6 +172,17 @@ class SiegeniaPercentNumber(CoordinatorEntity, NumberEntity):
         self._attr_unique_id = f"{entry.entry_id}-{slug}"
         if key in ("bathcontrolfanpower", "slave_fanpower"):
             self._attr_entity_registry_enabled_default = False
+            
+        if "airflow" in key or "fanpower" in key or "fanlevel" in key:
+            self._attr_native_min_value = 1.0
+            self._attr_native_max_value = 7.0
+            self._attr_native_step = 1.0
+            self._attr_native_unit_of_measurement = None
+        else:
+            self._attr_native_min_value = 0.0
+            self._attr_native_max_value = 100.0
+            self._attr_native_step = 1.0
+            self._attr_native_unit_of_measurement = "%"
 
     def _get_system_name(self) -> str | None:
         """Get the system name from device info."""

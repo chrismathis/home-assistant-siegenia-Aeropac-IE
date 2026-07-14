@@ -31,6 +31,7 @@ class SiegeniaClient:
         self._use_ssl = use_ssl
         self._hb = heartbeat_seconds
         self._session = session
+        self._owns_session = False
         self._ws: Optional[ClientWebSocketResponse] = None
         self._req_id = 0
         self._pending: dict[int, asyncio.Future] = {}
@@ -67,6 +68,7 @@ class SiegeniaClient:
 
             if self._session is None:
                 self._session = ClientSession()
+                self._owns_session = True
 
             scheme = "wss" if self._use_ssl else "ws"
             url = f"{scheme}://{self._host}:{self._port}/WebSocket"
@@ -144,7 +146,7 @@ class SiegeniaClient:
         if self._ws and not self._ws.closed:
             await self._ws.close()
         self._ws = None
-        if self._session and not self._session.closed:
+        if self._session and self._owns_session and not self._session.closed:
             await self._session.close()
         self._session = None
 
@@ -170,17 +172,17 @@ class SiegeniaClient:
         self._pending[rid] = fut
 
         try:
-            assert self._ws is not None
-            await self._ws.send_str(json.dumps(req))
-        except Exception:
-            # reconnect once and retry
-            await self.connect()
             try:
                 assert self._ws is not None
                 await self._ws.send_str(json.dumps(req))
-            except Exception as exc:
-                self._pending.pop(rid, None)
-                raise
+            except Exception:
+                # reconnect once and retry
+                await self.connect()
+                assert self._ws is not None
+                await self._ws.send_str(json.dumps(req))
+        except Exception:
+            self._pending.pop(rid, None)
+            raise
 
         try:
             status, payload = await asyncio.wait_for(fut, timeout=timeout)

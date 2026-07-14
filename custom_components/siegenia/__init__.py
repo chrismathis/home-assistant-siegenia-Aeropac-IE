@@ -6,7 +6,8 @@ from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     DOMAIN,
@@ -31,33 +32,36 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     port = entry.data.get("port", 443)
     use_ssl = entry.data.get("use_ssl", True)
 
+    session = async_get_clientsession(hass)
     client = SiegeniaClient(
         host=host,
         username=username,
         password=password,
         port=port,
         use_ssl=use_ssl,
+        session=session,
     )
     await client.connect()
 
     async def _async_update():
-        data: dict = {}
         try:
             if not client.connected:
                 await client.connect()
             state = await client.get_device_state()
             params = await client.get_device_params()
             info = await client.get_device()
-            data = {"state": state, "params": params, "info": info}
+            return {"state": state, "params": params, "info": info}
         except Exception as exc:
             # reconnect + retry once
             _LOGGER.debug("Update error, attempting reconnect: %s", exc)
-            await client.connect()
-            state = await client.get_device_state()
-            params = await client.get_device_params()
-            info = await client.get_device()
-            data = {"state": state, "params": params, "info": info}
-        return data
+            try:
+                await client.connect()
+                state = await client.get_device_state()
+                params = await client.get_device_params()
+                info = await client.get_device()
+                return {"state": state, "params": params, "info": info}
+            except Exception as retry_exc:
+                raise UpdateFailed(f"Error communicating with Siegenia device: {retry_exc}") from retry_exc
 
     coordinator = DataUpdateCoordinator(
         hass,

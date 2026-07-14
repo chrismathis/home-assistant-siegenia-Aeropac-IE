@@ -1,10 +1,29 @@
 {
+  "entity": {
+    "switch": {
+      "timer_enabled": {
+        "name": "Timer aktiviert"
+      },
+      "start_daily_at": {
+        "name": "Täglich starten"
+      }
+    },
+    "time": {
+      "start_time": {
+        "name": "Startzeit"
+      },
+      "timer_duration": {
+        "name": "Timer-Dauer"
+      }
+    }
+  },
   "config": {
     "step": {
       "user": {
         "title": "Verbindung mit Siegenia-Gerät",
         "description": "Geben Sie die IP-Adresse/Hostname und Anmeldedaten ein (die gleichen wie in der SIEGENIA-App).",
         "data": {
+          "name": "Gerätename",
           "host": "Hostname oder IP-Adresse",
           "username": "Benutzername",
           "password": "Passwort",

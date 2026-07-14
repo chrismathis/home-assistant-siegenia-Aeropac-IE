@@ -1,10 +1,29 @@
 {
+  "entity": {
+    "switch": {
+      "timer_enabled": {
+        "name": "Timer ingeschakeld"
+      },
+      "start_daily_at": {
+        "name": "Dagelijks starten"
+      }
+    },
+    "time": {
+      "start_time": {
+        "name": "Starttijd"
+      },
+      "timer_duration": {
+        "name": "Timerduur"
+      }
+    }
+  },
   "config": {
     "step": {
       "user": {
         "title": "Verbind met Siegenia apparaat",
         "description": "Voer het IP-adres/hostnaam en inloggegevens in (dezelfde als in de SIEGENIA app).",
         "data": {
+          "name": "Apparaatnaam",
           "host": "Hostnaam of IP-adres",
           "username": "Gebruikersnaam",
           "password": "Wachtwoord",

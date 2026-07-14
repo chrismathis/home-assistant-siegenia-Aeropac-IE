@@ -14,7 +14,7 @@ from .api import SiegeniaClient
 
 DATA_SCHEMA = vol.Schema(
     {
-        vol.Optional("name", default="Siegenia Aerotube"): str,
+        vol.Optional("name", default="Siegenia Aeropac"): str,
         vol.Required(CONF_HOST): str,
         vol.Required(CONF_USERNAME): str,
         vol.Required(CONF_PASSWORD): str,
@@ -29,7 +29,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input: Dict[str, Any] | None = None) -> FlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
-            name = user_input.get("name", "Siegenia Aerotube")
+            name = user_input.get("name", "Siegenia Aeropac")
             host = user_input[CONF_HOST]
             username = user_input[CONF_USERNAME]
             password = user_input[CONF_PASSWORD]

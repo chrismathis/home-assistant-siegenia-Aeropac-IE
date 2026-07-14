@@ -1,5 +1,5 @@
 DOMAIN = "siegenia"
-PLATFORMS = ["fan", "sensor", "binary_sensor", "number", "switch", "select"]
+PLATFORMS = ["fan", "sensor", "binary_sensor", "number", "switch", "select", "time"]
 
 DEFAULT_PORT = 443
 DEFAULT_USE_SSL = True
