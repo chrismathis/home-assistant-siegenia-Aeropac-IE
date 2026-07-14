@@ -5,6 +5,7 @@ from typing import Any
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.config_entries import ConfigEntry
 
 from .const import DOMAIN, DATA_CLIENT, DATA_COORDINATOR
@@ -32,9 +33,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     timer = d.get("timer")
     if isinstance(timer, dict):
         if "enabled" in timer:
-            entities.append(SiegeniaTimerSwitch(hass, entry, "enabled", "Timer Enabled", "mdi:timer"))
+            entities.append(SiegeniaTimerSwitch(hass, entry, "enabled", "timer_enabled", "mdi:timer"))
         if "repeat" in timer:
-            entities.append(SiegeniaTimerSwitch(hass, entry, "repeat", "Timer Repeat", "mdi:timer-sync"))
+            entities.append(SiegeniaTimerSwitch(hass, entry, "repeat", "start_daily_at", "mdi:timer-sync"))
 
     if entities:
         async_add_entities(entities, True)
@@ -141,15 +142,17 @@ class SiegeniaSilentTimerSwitch(CoordinatorEntity, SwitchEntity):
 
 
 class SiegeniaTimerSwitch(CoordinatorEntity, SwitchEntity):
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, key: str, name_suffix: str, icon: str) -> None:
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_has_entity_name = True
+
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, key: str, translation_key: str, icon: str) -> None:
         coord = hass.data[DOMAIN][entry.entry_id][DATA_COORDINATOR]
         super().__init__(coord)
         self._client = hass.data[DOMAIN][entry.entry_id][DATA_CLIENT]
         self._entry = entry
         self._key = key
         self._attr_icon = icon
-        system_name = self._get_system_name()
-        self._attr_name = f"{system_name} {name_suffix}" if system_name else f"Siegenia {name_suffix}"
+        self._attr_translation_key = translation_key
         slug = key.lower().replace("_", "-").replace(".", "-")
         self._attr_unique_id = f"{entry.entry_id}-timer-{slug}"
 

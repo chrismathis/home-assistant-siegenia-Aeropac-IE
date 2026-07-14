@@ -1,4 +1,22 @@
 {
+  "entity": {
+    "switch": {
+      "timer_enabled": {
+        "name": "Timer Enabled"
+      },
+      "start_daily_at": {
+        "name": "Start daily at"
+      }
+    },
+    "time": {
+      "start_time": {
+        "name": "Start Time"
+      },
+      "timer_duration": {
+        "name": "Timer Duration"
+      }
+    }
+  },
   "config": {
     "step": {
       "user": {

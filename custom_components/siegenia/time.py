@@ -29,23 +29,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     timer = d.get("timer")
     if isinstance(timer, dict):
         if "poweron_time" in timer:
-            entities.append(SiegeniaTimeEntity(coord, entry, "poweron_time", "Timer Start Time"))
+            entities.append(SiegeniaTimeEntity(coord, entry, "poweron_time", "start_time"))
         if "duration" in timer:
-            entities.append(SiegeniaTimeEntity(coord, entry, "duration", "Timer Duration"))
+            entities.append(SiegeniaTimeEntity(coord, entry, "duration", "timer_duration"))
 
     if entities:
         async_add_entities(entities, True)
 
 class SiegeniaTimeEntity(CoordinatorEntity, TimeEntity):
     _attr_entity_category = EntityCategory.CONFIG
+    _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry: ConfigEntry, key: str, name_suffix: str) -> None:
+    def __init__(self, coordinator, entry: ConfigEntry, key: str, translation_key: str) -> None:
         super().__init__(coordinator)
         self._entry = entry
         self._key = key
         self._client = coordinator.hass.data[DOMAIN][entry.entry_id][DATA_CLIENT]
-        system_name = self._get_system_name()
-        self._attr_name = f"{system_name} {name_suffix}" if system_name else f"Siegenia {name_suffix}"
+        self._attr_translation_key = translation_key
         slug = key.lower().replace("_", "-").replace(".", "-")
         self._attr_unique_id = f"{entry.entry_id}-{slug}"
         if key == "duration":
