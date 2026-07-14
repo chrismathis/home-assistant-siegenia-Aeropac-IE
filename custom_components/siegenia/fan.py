@@ -168,10 +168,15 @@ class SiegeniaFanEntity(CoordinatorEntity, FanEntity):
     async def async_set_percentage(self, percentage: int) -> None:
         target_pct = max(0, min(100, int(percentage or 0)))
         raw_power = int(round(target_pct * 7 / 100))
+        is_on = raw_power > 0
         params: dict[str, Any] = {
+            "power": is_on,
+            "on": is_on,
+            "enabled": is_on,
             "automode": False,
             "auto_mode": False,
             "fanpower": raw_power,
+            "devicestate": {"deviceactive": is_on}
         }
         await self._client.set_device_params(params)
         await self.coordinator.async_request_refresh()
@@ -204,7 +209,15 @@ class SiegeniaFanEntity(CoordinatorEntity, FanEntity):
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        await self._client.set_device_params({"devicestate": {"deviceactive": False}})
+        await self._client.set_device_params({
+            "power": False,
+            "on": False,
+            "enabled": False,
+            "automode": False,
+            "auto_mode": False,
+            "fanpower": 0,
+            "devicestate": {"deviceactive": False}
+        })
         await self.coordinator.async_request_refresh()
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:

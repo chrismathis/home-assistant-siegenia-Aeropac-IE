@@ -144,7 +144,16 @@ class SiegeniaFanPowerNumber(CoordinatorEntity, NumberEntity):
         value = max(0.0, min(float(value), float(eff_max)))
         pct = int(round((value * 100) / max(1.0, float(eff_max))))
         raw_power = int(round(pct * 7 / 100))
-        await self._client.set_device_params({"automode": False, "auto_mode": False, "fanpower": raw_power})
+        is_on = raw_power > 0
+        await self._client.set_device_params({
+            "power": is_on,
+            "on": is_on,
+            "enabled": is_on,
+            "automode": False,
+            "auto_mode": False,
+            "fanpower": raw_power,
+            "devicestate": {"deviceactive": is_on}
+        })
         await self.coordinator.async_request_refresh()
 
 
