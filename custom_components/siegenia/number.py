@@ -144,11 +144,6 @@ class SiegeniaFanPowerNumber(CoordinatorEntity, NumberEntity):
         value = max(0.0, min(float(value), float(eff_max)))
         pct = int(round((value * 100) / max(1.0, float(eff_max))))
         raw_power = int(round(pct * 7 / 100))
-        is_on = raw_power > 0
-        
-        await self._client.set_device_params({
-            "devicestate": {"deviceactive": is_on}
-        })
         
         await self._client.set_device_params({
             "fanlevel": raw_power

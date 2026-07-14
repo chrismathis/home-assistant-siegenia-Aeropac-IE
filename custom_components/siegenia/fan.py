@@ -174,14 +174,7 @@ class SiegeniaFanEntity(CoordinatorEntity, FanEntity):
     async def async_set_percentage(self, percentage: int) -> None:
         target_pct = max(0, min(100, int(percentage or 0)))
         raw_power = int(round(target_pct * 7 / 100))
-        is_on = raw_power > 0
         
-        # Send power state first
-        await self._client.set_device_params({
-            "devicestate": {"deviceactive": is_on}
-        })
-        
-        # Then send fan speed
         await self._client.set_device_params({
             "fanlevel": raw_power
         })
