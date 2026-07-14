@@ -131,7 +131,7 @@ class SiegeniaFanPowerNumber(CoordinatorEntity, NumberEntity):
     def native_value(self) -> float | None:
         d = self._d()
         try:
-            raw_power = int(d.get("fanpower", 0) or 0)
+            raw_power = int(d.get("fanlevel", d.get("fanpower", 0)) or 0)
             pct = int(round(raw_power * 100 / 7))
         except Exception:
             pct = 0
@@ -145,15 +145,15 @@ class SiegeniaFanPowerNumber(CoordinatorEntity, NumberEntity):
         pct = int(round((value * 100) / max(1.0, float(eff_max))))
         raw_power = int(round(pct * 7 / 100))
         is_on = raw_power > 0
+        
         await self._client.set_device_params({
-            "power": is_on,
-            "on": is_on,
-            "enabled": is_on,
-            "automode": False,
-            "auto_mode": False,
-            "fanpower": raw_power,
             "devicestate": {"deviceactive": is_on}
         })
+        
+        await self._client.set_device_params({
+            "fanlevel": raw_power
+        })
+        
         await self.coordinator.async_request_refresh()
 
 
