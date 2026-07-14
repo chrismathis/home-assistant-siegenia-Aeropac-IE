@@ -5,7 +5,7 @@
         "name": "Timer Enabled"
       },
       "start_daily_at": {
-        "name": "Start daily at"
+        "name": "Start daily"
       }
     },
     "time": {

@@ -1,9 +1,11 @@
 # Siegenia for Home Assistant
 
-A Home Assistant integration to control and monitor Siegenia Aeroplus WRG smart ventilation devices with Co2 sensor.
+A Home Assistant integration to control and monitor Siegenia Aeropac IE ventilation devices with Co2 sensor.
 Vibe coded, based on the awesome work for iobroker here: https://github.com/Apollon77/ioBroker.siegenia 
 
-Tested with 4 Aeroplus WRG modules. Other siegenia devices might work, untested.
+Tested with 1 Aeropac IE. Other siegenia devices will probably not work.
+This is to make my aeropac to be able to have different timers per day - everthing else is just icing on the cake.
+
 
 ## Features
 
@@ -21,26 +23,6 @@ Tested with 4 Aeroplus WRG modules. Other siegenia devices might work, untested.
   - 100% maps to device's maximum airflow capacity
   - Respects manual airflow cap settings
   - Features: Turn On/Off, Set Speed/Percentage
-
-#### Numeric Control
-- **Siegenia Fan Power**: Direct airflow control in m³/h
-  - Auto-adjusts to device's maximum capacity
-  - Takes into account manual power limitations
-
-#### Mode Control
-- **Siegenia Auto Mode** (Switch): Toggle automatic operation mode
-
-#### Sensors
-- Temperature (Incoming/Outgoing air) in °C
-- Humidity (Incoming/Outgoing air) in %
-- CO₂ Level (ppm, `airquality.co2content` when available)
-- Air Quality
-- Maximum Fan Power
-- Manual Fan Power Cap
-- System Name
-- Connection Status
-- **Siegenia Online** (Binary Sensor): WebSocket connection status
-- **Siegenia Raw State**: Diagnostic sensor showing complete device state
 
 ## Installation
 

@@ -1,13 +1,13 @@
 {
   "domain": "siegenia",
-  "name": "Siegenia (alpha)",
-  "version": "0.7.0",
-  "documentation": "https://github.com/rikbootsman/home-assistant-siegenia-Aeroplus-WRG",
-  "issue_tracker": "https://github.com/rikbootsman/home-assistant-siegenia-Aeroplus-WRG/issues",
+  "name": "Siegenia Aeropac IE (alpha)",
+  "version": "0.8.0",
+  "documentation": "https://github.com/chrismathis/home-assistant-siegenia-Aeropac-IE",
+  "issue_tracker": "https://github.com/chrismathis/home-assistant-siegenia-Aeropac-IE",
   "requirements": [],
   "dependencies": [],
   "codeowners": [
-    "@rikbootsman"
+    "@chrismathis"
   ],
   "iot_class": "local_push",
   "config_flow": true
